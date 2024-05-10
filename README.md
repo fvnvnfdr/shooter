@@ -11,3 +11,4 @@
 ```
 pip install pygame
 ```
+Ссылка на мой профиль в Github  <https://github.com/fvnvnfdr>
