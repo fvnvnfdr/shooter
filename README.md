@@ -1,4 +1,6 @@
 # shooter
+![ракета](https://mychamp.ru/system/clubs/39458/medium.jpg)
+
 
 ## общее описание
 простая игра на **python**
