@@ -2,15 +2,18 @@ from pygame import *
 from random import randint
 from time import time as get_time
 
-
 SCREEN_SIZE = (900, 800)
 SPRITE_SIZE = 65
 
-def show_label(text, x, y, font_name='Arial', color=(255, 255, 255)):
+def show_label(text: str, x: int, y: int, font_name: str='Arial', color :tuple=(255, 255, 255)):
+    '''
+    выводит надпись на игровую сцену window
+    '''
     font.init()
     font1 = font.SysFont(font_name, 40)
     text = font1.render(text, True, color)
     window.blit(text, (x, y))
+    show_label()
 
 class Live:
     def __init__(self, x,y, image_name, lives):
@@ -28,6 +31,7 @@ lives = Live(SCREEN_SIZE[0] - SPRITE_SIZE//2, 20, 'rocket.png', 5)
 class GameSprite(sprite.Sprite):
     def __init__(self, image_name, speed, x, y):
         super().__init__()
+        self.image_name = image_name
         self.image = image.load(image_name)
         self.image = transform.scale(self.image, (SPRITE_SIZE, SPRITE_SIZE))
         self.speed = speed
@@ -52,7 +56,7 @@ class Player(GameSprite):
         new_bullet = Bullet('bullet.png', 7, self.rect.centerx-3, self.rect.y)
         new_bullet.image = transform.scale(new_bullet.image, (10, 30))
         bullets.add(new_bullet)
-        if chetchik2.counter >= 10:
+        if killed_counter.counter >= 10:
             new_bullet = Bullet('bullet.png', 7, self.rect.centerx-3, self.rect.y, 1)
             new_bullet.image = transform.scale(new_bullet.image, (10, 30))
             bullets.add(new_bullet)
@@ -60,8 +64,31 @@ class Player(GameSprite):
             new_bullet.image = transform.scale(new_bullet.image, (10, 30))
             bullets.add(new_bullet)
     
-
 class Enemy(GameSprite):
+    def __init__(self, image_name, speed, x, y):
+        super().__init__(image_name, speed, x, y)
+        self.set_hp()
+        
+    def set_hp(self):
+        self.hp = randint(1, 5)
+        if self.hp in (3, 4, 5):
+            self.speed = 1
+            x, y = self.rect.x, self.rect.y
+            self.image = image.load(self.image_name)
+            self.image = transform.scale(self.image, (SPRITE_SIZE, SPRITE_SIZE))
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.y = y    
+        else:
+            self.speed = 3
+            x, y = self.rect.x, self.rect.y
+            self.image = image.load(self.image_name)
+            self.image = transform.scale(self.image, (SPRITE_SIZE//2, SPRITE_SIZE//2))
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.y = y    
+
+
     def update(self):
         self.rect.y += self.speed
         if self.rect.y >= SCREEN_SIZE[1]:
@@ -108,7 +135,6 @@ asteroids = sprite.Group()
 for i in range(2):
     asteroids.add(Asteroid('asteroid.png', randint(1,2), randint(0, 635), 0))
 
-
 font.init()
 
 class Counter:
@@ -124,16 +150,12 @@ class Counter:
     def draw(self):
         window.blit(self.image, self.pos)
 
-
-
-
-
-player = Player('rocket.png', 7, 10, SCREEN_SIZE[1] - SPRITE_SIZE-5)
+player = Player('rocket.png', 7, SCREEN_SIZE[0]//2, SCREEN_SIZE[1] - SPRITE_SIZE - 5)
 player.last_shoot = 0
 
 ufos = sprite.Group()
 for i in range(5):
-    ufos.add(Enemy('ufo.png', 1, randint(0, 635), 0))
+    ufos.add(Enemy('ufo.png', 1, randint(0, SCREEN_SIZE[0]-SPRITE_SIZE), 0))
 
 window = display.set_mode(SCREEN_SIZE)
 display.set_caption('Shooter')
@@ -141,13 +163,12 @@ display.set_caption('Shooter')
 missed_counter = Counter('Счетчик пропущенных:',10,10)
 missed_counter.set_text(24,(255,255,255))
 
-chetchik2 = Counter('Счетчик уничтоженных:',10,50)
-chetchik2.set_text(24,(255,255,255))
+killed_counter = Counter('Счетчик уничтоженных:',10,50)
+killed_counter.set_text(24,(255,255,255))
 
 mixer.init()
 mixer.music.load('space.ogg')
 mixer.music.play()
-
 
 pic = image.load('galaxy.jpg')
 pic = transform.scale(pic, SCREEN_SIZE)
@@ -175,7 +196,7 @@ while game:
         player.reset()
         player.update()
         missed_counter.draw()
-        chetchik2.draw()    
+        killed_counter.draw()    
         bullets.update()
         asteroids.update()
         bullets.draw(window)
@@ -184,7 +205,7 @@ while game:
             lives.lives += 1
             heart.rect.y = SCREEN_SIZE[1]*2
         lives.update()
-        if chetchik2.counter >= 50:
+        if killed_counter.counter >= 50:
             show_label('Победа', SCREEN_SIZE[0]//2-40, SCREEN_SIZE[1]//2-20)
             finish = True
         if missed_counter.counter >= 3:
@@ -194,7 +215,7 @@ while game:
         if sprite.spritecollide(player, ufos, False) or sprite.spritecollide(player, asteroids, False):
             for s in sprite.spritecollide(player, ufos, False) + sprite.spritecollide(player,asteroids, False):
                 s.rect.y = 0
-                s.rect.x = randint(1,635)
+                s.rect.x = randint(0, SCREEN_SIZE[0]-SPRITE_SIZE)
                 lives.lives -= 1
             
         if lives.lives <= 0:    
@@ -204,10 +225,18 @@ while game:
         
         list_monsters = sprite.groupcollide(ufos, bullets, False, True)
         for monster in list_monsters:
+            monster.hp -= 1
+            if monster.hp <= 0:
+                monster.set_hp()
+                monster.hp = randint(1, 5)
             monster.rect.y = 0
-            monster.rect.x = randint(1, 635)
-            chetchik2.counter += 1
-            chetchik2.set_text(24,(255,255,255))
+            monster.rect.x = randint(1, SCREEN_SIZE[1]-SPRITE_SIZE)
+            killed_counter.counter += 1
+            killed_counter.set_text(24,(255,255,255))
+            if killed_counter.counter == 15:
+                for i in range(5):
+                    ufos.add(Enemy('ufo.png', 1, randint(0, SCREEN_SIZE[0]-SPRITE_SIZE), 0))
+
         
     for e in event.get():
         if e.type == QUIT:
